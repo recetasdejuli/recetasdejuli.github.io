@@ -1,3 +1,3 @@
-# Recetas de Juli
+# Recetas de Julieta I.
 
-Recetario de la casa: https://recetasdejuli.github.io
+Recetario personal de Julieta Irrazabal: https://recetasdejuli.github.io
