@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Atlas de Juli</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#edf2f1; --surface:#fafcfb; --raised:#ffffff;
+  --ink:#14303a; --muted:#587078; --line:#cddadb;
+  --accent:#b92d57; --accent-ink:#ffffff; --wish:#b97a0a;
+  --scrim:rgba(13,32,39,.45);
+  --f-display:"DM Serif Display",Georgia,"Times New Roman",serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"DM Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --gut-l:max(16px,env(safe-area-inset-left,0px)); --gut-r:max(16px,env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#0c1a20; --surface:#11242c; --raised:#172e38;
+  --ink:#e4eeee; --muted:#8fa7ae; --line:#25414c;
+  --accent:#f0739a; --accent-ink:#2a0a16; --wish:#e7b24a;
+  --scrim:rgba(2,8,11,.65); color-scheme:dark } }
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column}
+h1,h2,h3,p,ul{margin:0} ul{padding:0;list-style:none}
+button,input,select,textarea{font:inherit;color:inherit} button{cursor:pointer}
+a{color:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+
+.top{display:flex;align-items:center;gap:10px 26px;flex-wrap:wrap;padding:12px var(--gut-r) 12px var(--gut-l);border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{font-family:var(--f-display);font-style:italic;font-size:26px;line-height:1;font-weight:400;text-decoration:none}
+.brand span{color:var(--accent)}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav a{padding:6px 14px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:600;font-size:14px}
+.nav a[aria-current="page"]{background:var(--ink);color:var(--surface)}
+.top .grow{flex:1}
+
+.btn{border:1px solid var(--line);background:var(--raised);border-radius:8px;padding:7px 12px;font-weight:600;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--accent)}
+.btn.small{padding:4px 9px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.chip .sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--c)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--raised)}
+.seg button{border:0;background:transparent;padding:8px 16px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field > span{font-size:12px;font-weight:600;color:var(--muted)}
+.input{width:100%;border:1px solid var(--line);background:var(--raised);border-radius:8px;padding:8px 10px;min-width:0}
+textarea.input{resize:vertical;min-height:100px;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);max-width:56ch;padding:10px 0}
+
+/* map view */
+#app{flex:1;min-height:0;display:flex;flex-direction:column}
+.mapview{flex:1;min-height:0;display:grid;grid-template-columns:310px minmax(0,1fr)}
+.side{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side-head{padding:16px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--line)}
+.side-body{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 20px}
+.stats{display:grid;grid-template-columns:repeat(4,auto);gap:4px 14px;justify-content:space-between}
+.stat b{display:block;font-family:var(--f-mono);font-weight:500;font-size:20px;line-height:1.2}
+.stat span{font-size:11.5px;color:var(--muted)}
+.cgroup{padding-top:12px}
+.chead{display:flex;align-items:baseline;gap:8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.chead .cname{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0}
+.pitem{width:100%;display:flex;align-items:baseline;gap:9px;text-align:left;border:0;background:transparent;padding:7px 6px;border-radius:6px}
+.pitem:hover{background:var(--bg)}
+.pitem b{font-weight:500;flex:1;min-width:0;overflow-wrap:anywhere}
+.pitem small{font-size:11.5px;color:var(--muted);text-align:right}
+.bigmap{min-height:0;min-width:0}
+.leaflet-container{font-family:var(--f-body);background:var(--bg)}
+.map{border:1px solid var(--line);border-radius:12px;overflow:hidden;height:380px;z-index:0}
+.map.tall{height:520px}
+.mk{width:26px;height:26px;border-radius:50%;background:var(--c,#b92d57);color:#fff;border:2px solid #fff;display:grid;place-items:center;font:500 12px/1 var(--f-mono);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.mk.sm{width:16px;height:16px}
+.pop b{display:block;font-size:14px}
+.pop .hint{display:block;margin:2px 0 6px}
+.pop a,.pop button{display:block;border:0;background:none;padding:2px 0;color:#b92d57;font-weight:600;font-size:13px;text-align:left;text-decoration:underline;cursor:pointer}
+
+/* pages */
+.page{flex:1;min-height:0;overflow-y:auto}
+.page-in{max-width:1040px;margin:0 auto;padding:28px var(--gut-r) 70px var(--gut-l);display:flex;flex-direction:column;gap:22px}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 16px;flex-wrap:wrap}
+.page-head h1{font-family:var(--f-display);font-weight:400;font-size:40px;line-height:1.05;text-wrap:balance;overflow-wrap:anywhere}
+.trips{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.trip{display:flex;flex-direction:column;gap:8px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;text-decoration:none;min-width:0}
+.trip:hover{border-color:var(--muted)}
+.trip .thead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.trip h3{font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.15;overflow-wrap:anywhere}
+.trip .yr{font-size:14px;color:var(--accent)}
+.trip .cities{font-size:14.5px;overflow-wrap:anywhere}
+.trip .meta{font-size:12px;color:var(--muted)}
+.cover{aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--line)}
+.cover img,.photos img,.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.sec{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sec-head h2{font-family:var(--f-display);font-weight:400;font-size:26px}
+.stops{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stopchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 6px 4px 12px;font-weight:600;font-size:14px}
+.stopchip button{border:0;background:transparent;color:var(--muted);padding:0 5px;font-size:15px;line-height:1}
+.daygrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:16px;align-items:start}
+.daylist{display:flex;flex-direction:column;gap:14px;min-width:0}
+.dayblock{display:flex;flex-direction:column;gap:4px}
+.dayhead{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.dayhead i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.pt{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:start;padding:7px 0;border-bottom:1px dashed var(--line)}
+.pt .num{width:24px;height:24px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font:500 12px/1 var(--f-mono)}
+.pt b{font-weight:600;overflow-wrap:anywhere}
+.pt .cat{font-size:12.5px;color:var(--muted)}
+.pt .note{font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pt .tools{display:flex;gap:2px}
+.pt .tools button{border:0;background:transparent;color:var(--muted);padding:2px 6px;border-radius:5px;font-size:14px}
+.pt .tools button:hover{background:var(--line);color:var(--ink)}
+.pickbar{background:var(--ink);color:var(--surface);padding:8px 8px 8px 14px;border-radius:10px;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pickbar .btn{background:transparent;color:inherit;border-color:currentColor}
+.picking .leaflet-container{cursor:crosshair}
+
+.entry{display:grid;grid-template-columns:72px minmax(0,1fr);gap:18px}
+.stamp{width:72px;height:72px;border:1.5px solid var(--accent);color:var(--accent);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-mono);line-height:1.05;transform:rotate(-7deg);box-shadow:inset 0 0 0 3px var(--bg),inset 0 0 0 4px var(--accent)}
+.stamp b{font-size:21px;font-weight:500}.stamp span{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+.entry-body{display:flex;flex-direction:column;gap:9px;min-width:0;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.entry h3{font-family:var(--f-display);font-weight:400;font-size:25px;line-height:1.15;overflow-wrap:anywhere}
+.entry-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.entry-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.6;max-width:65ch}
+.photos{display:grid;gap:6px;grid-template-columns:repeat(3,1fr)}
+.photos.n1{grid-template-columns:1fr}.photos.n2,.photos.n4{grid-template-columns:repeat(2,1fr)}
+.photos button{border:0;padding:0;background:var(--line);border-radius:6px;overflow:hidden;aspect-ratio:1}
+.photos.n1 button{aspect-ratio:3/2}
+.wishes{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.wish{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.wish.done{opacity:.6}
+.wish .whead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.wish b{font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.wish .note{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:0;width:min(540px,calc(100vw - 24px));max-height:calc(100% - 24px)}
+dialog::backdrop{background:var(--scrim)}
+.dlg form{display:flex;flex-direction:column;max-height:calc(100vh - 26px)}
+.dlg header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 8px}
+.dlg h2{font-family:var(--f-display);font-weight:400;font-size:24px}
+.dlg .x{border:0;background:transparent;font-size:22px;line-height:1;padding:4px 8px;color:var(--muted)}
+.dlg .body{padding:6px 18px 16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.dlg footer{display:flex;justify-content:space-between;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.dlg footer .right{display:flex;gap:8px;margin-left:auto}
+.srch{display:flex;gap:8px}
+.results{display:flex;flex-direction:column;max-height:230px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+.results:empty{display:none}
+.results button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:8px 10px}
+.results li:last-child button{border-bottom:0}
+.results button:hover{background:var(--bg)}
+.results b{display:block;font-weight:600}
+.results small{color:var(--muted);font-size:12.5px}
+.where{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:13.5px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--line)}
+.thumb button{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:24px;height:24px;background:var(--ink);color:var(--surface);line-height:1;font-size:14px}
+#lightbox{width:auto;max-width:calc(100vw - 16px);background:transparent;border:0}
+#lightbox img{display:block;max-width:100%;max-height:calc(100vh - 80px);border-radius:8px}
+#lightbox button{display:block;margin:8px auto 0}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:9px 14px;border-radius:9px;font-size:14px;font-weight:500;z-index:5000;max-width:calc(100vw - 32px)}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .mapview{display:flex;flex-direction:column}
+  .bigmap{height:62vh;order:1}
+  .side{order:2;border-right:0;border-top:1px solid var(--line)}
+  .side-body{overflow:visible}
+  .page{overflow:visible}
+  .page-head h1{font-size:32px}
+  .daygrid{grid-template-columns:1fr}
+  .map,.map.tall{height:340px}
+  .entry{grid-template-columns:56px minmax(0,1fr);gap:12px}
+  .stamp{width:56px;height:56px}.stamp b{font-size:17px}.stamp span{font-size:9px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/mapa">Atlas de Juli<span>.</span></a>
+  <nav class="nav" aria-label="Secciones">
+    <a href="#/mapa" data-nav="mapa">Mapa</a>
+    <a href="#/viajes" data-nav="viajes">Viajes</a>
+    <a href="#/quiero" data-nav="quiero">Quiero ir</a>
+  </nav>
+  <span class="grow"></span>
+  <button class="btn small ghost" id="btn-backup" type="button">Copia de seguridad</button>
+</header>
+<main id="app"></main>
+<dialog id="dlg" class="dlg"></dialog>
+<dialog id="lightbox" aria-label="Foto"><img id="lightbox-img" alt=""><button class="btn" type="button" id="lightbox-close">Cerrar</button></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+function h(tag,attrs,...kids){
+  const e=document.createElement(tag);
+  for(const k in (attrs||{})){const v=attrs[k]; if(v==null||v===false)continue;
+    if(k==="class")e.className=v; else if(k==="text")e.textContent=v;
+    else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k,v===true?"":v);}
+  for(const c of kids.flat(3)){ if(c==null||c===false)continue; e.append(c.nodeType?c:document.createTextNode(String(c))); }
+  return e;
+}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const MES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const CATS=[["hotel","Alojamiento","🛏️"],["comida","Comida","🍽️"],["cafe","Café o bar","☕"],["museo","Museo","🏛️"],["monumento","Monumento o estatua","🗿"],["paseo","Paseo o barrio","🚶"],["naturaleza","Naturaleza o playa","🌿"],["mirador","Mirador","🔭"],["compras","Compras","🛍️"],["show","Espectáculo","🎭"],["transporte","Transporte","🚆"],["otro","Otro","📍"]];
+const WCATS=[["ciudad","Ciudad o pueblo","🏙️"],["idea","Idea","💡"],...CATS.filter(c=>c[0]!=="transporte")];
+const catOf=(id,list)=>(list||CATS).find(c=>c[0]===id)||CATS[CATS.length-1];
+const DAYC=["#b92d57","#1f7a8c","#c27a0e","#5b4bb5","#2e8b57","#d1495b","#3a6ea5","#8a5a44"];
+const dayColor=d=>DAYC[(d-1)%DAYC.length];
+let regionNames=null; try{regionNames=new Intl.DisplayNames(["es"],{type:"region"});}catch(e){}
+const countryName=(cc,fb)=>{ if(!cc)return fb||"Sin país"; try{return (regionNames&&regionNames.of(cc))||fb||cc;}catch(e){return fb||cc;} };
+const flag=cc=>/^[A-Z]{2}$/.test(cc||"")?String.fromCodePoint(...[...cc].map(c=>127397+c.charCodeAt(0))):"";
+const pd=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||""); return m?{y:+m[1],m:+m[2],d:+m[3]}:null;};
+const fmtDate=s=>{const p=pd(s); return p?`${p.d} ${MES[p.m-1]} ${p.y}`:"";};
+function fmtRange(a,b){
+  const x=pd(a),y=pd(b); if(!x)return ""; if(!y||a===b)return fmtDate(a);
+  if(x.y===y.y&&x.m===y.m)return `${x.d}–${y.d} ${MES[x.m-1]} ${x.y}`;
+  if(x.y===y.y)return `${x.d} ${MES[x.m-1]} – ${y.d} ${MES[y.m-1]} ${x.y}`;
+  return `${fmtDate(a)} – ${fmtDate(b)}`;
+}
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
+const plural=(n,a,b)=>`${n} ${n===1?a:b}`;
+let toastT=0;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},4200);}
+const dark=()=>window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches;
+
+/* ================= storage (this browser) ================= */
+const idb=(()=>{let p;
+  const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open("atlas-juli",1);
+    r.onupgradeneeded=()=>{r.result.createObjectStore("kv");r.result.createObjectStore("photos");};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}));
+  const tx=async(store,mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction(store,mode);const rq=fn(t.objectStore(store));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});};
+  return {get:(s,k)=>tx(s,"readonly",o=>o.get(k)),put:(s,k,v)=>tx(s,"readwrite",o=>o.put(v,k)),del:(s,k)=>tx(s,"readwrite",o=>o.delete(k)),keys:s=>tx(s,"readonly",o=>o.getAllKeys())};
+})();
+let DB={trips:[],points:[],entries:[],wishes:[]};
+async function loadDB(){ try{const d=await idb.get("kv","state"); if(d)DB=Object.assign({trips:[],points:[],entries:[],wishes:[]},d);}catch(e){toast("Este navegador no deja guardar datos. Probá sin modo incógnito.");} }
+let saveT=0;
+function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{idb.put("kv","state",DB).catch(()=>toast("No se pudo guardar el último cambio."));},150); }
+const photoURLs=new Map();
+async function shrink(file){
+  try{const bmp=await createImageBitmap(file),s=Math.min(1,1800/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.86)); if(blob)return blob;}catch(e){}
+  return file;
+}
+async function addPhoto(file){const blob=await shrink(file),id=uid();await idb.put("photos",id,blob);photoURLs.set(id,URL.createObjectURL(blob));return id;}
+async function photoURL(id){ if(photoURLs.has(id))return photoURLs.get(id); const b=await idb.get("photos",id); if(!b)return ""; const u=URL.createObjectURL(b);photoURLs.set(id,u);return u; }
+function dropPhotos(ids){(ids||[]).forEach(id=>{idb.del("photos",id).catch(()=>{});photoURLs.delete(id);});}
+function hydrate(rootEl){(rootEl||document).querySelectorAll("img[data-ph]").forEach(async img=>{ if(img.getAttribute("src"))return; const u=await photoURL(img.dataset.ph); if(u)img.src=u; });}
+const pimg=(id,alt)=>h("img",{"data-ph":id,alt:alt||"Foto",loading:"lazy"});
+
+/* ================= helpers on data ================= */
+const tripById=id=>DB.trips.find(t=>t.id===id);
+const tripYear=t=>{const p=pd(t.start);return p?p.y:"";};
+const stopPoints=(tripId,stopId)=>DB.points.filter(p=>p.tripId===tripId&&p.stopId===stopId).sort((a,b)=>a.day-b.day||a.order-b.order);
+const stopDays=(t,s)=>Math.max(s.days||1,...stopPoints(t.id,s.id).map(p=>p.day),1);
+function deleteTrip(t){
+  dropPhotos(DB.points.filter(p=>p.tripId===t.id).flatMap(p=>p.photos||[]));
+  dropPhotos(DB.entries.filter(e=>e.tripId===t.id).flatMap(e=>e.photos||[]));
+  DB.points=DB.points.filter(p=>p.tripId!==t.id);DB.entries=DB.entries.filter(e=>e.tripId!==t.id);DB.trips=DB.trips.filter(x=>x.id!==t.id);save();
+}
+
+/* ================= geo ================= */
+let GEO=null,META=null,numToCc={};
+const geoReady=Promise.all([fetch("world.json").then(r=>r.json()),fetch("meta.json").then(r=>r.json())]).then(([topo,meta])=>{
+  META=meta;for(const cc in meta.countries){const n=meta.countries[cc][0];if(n)numToCc[n]=cc;}
+  GEO=topojson.feature(topo,topo.objects.countries);return true;}).catch(()=>false);
+async function geocode(q,near){
+  const u=new URL("https://nominatim.openstreetmap.org/search");
+  u.searchParams.set("format","jsonv2");u.searchParams.set("addressdetails","1");u.searchParams.set("limit","8");u.searchParams.set("accept-language","es");u.searchParams.set("q",q);
+  if(near)u.searchParams.set("viewbox",[near.lng-0.6,near.lat+0.45,near.lng+0.6,near.lat-0.45].join(","));
+  const r=await fetch(u); if(!r.ok)throw new Error("geo");
+  return (await r.json()).map(x=>({name:x.name||String(x.display_name||"").split(",")[0],label:x.display_name||"",lat:+(+x.lat).toFixed(5),lng:+(+x.lon).toFixed(5),cc:((x.address&&x.address.country_code)||"").toUpperCase(),country:(x.address&&x.address.country)||""}));
+}
+const maps=[];let after=[];
+function tiles(map){
+  L.tileLayer(dark()?"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png":"https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    {maxZoom:19,subdomains:"abcd",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+}
+function mkMap(el,opts){const m=L.map(el,Object.assign({scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true},opts||{}));tiles(m);maps.push(m);setTimeout(()=>{if(maps.includes(m))m.invalidateSize({animate:false});},60);return m;}
+const numIcon=(n,color,small)=>L.divIcon({className:"",html:`<div class="mk${small?" sm":""}" style="--c:${color}">${n==null?"":n}</div>`,iconSize:small?[16,16]:[26,26],iconAnchor:small?[8,8]:[13,13],popupAnchor:[0,-12]});
+const gmaps=(lat,lng)=>`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+/* ================= dialogs ================= */
+const dlg=$("#dlg");
+function openDialog(title,body,opt){
+  opt=opt||{};
+  const form=h("form",{novalidate:false},
+    h("header",null,h("h2",{text:title}),h("button",{type:"button",class:"x","aria-label":"Cerrar",onclick:()=>dlg.close()},"×")),
+    h("div",{class:"body"},body),
+    opt.onSave||opt.onDelete?h("footer",null,
+      opt.onDelete?confirmBtn("Eliminar",opt.deleteAsk||"¿Eliminar?",()=>{opt.onDelete();dlg.close();}):null,
+      h("div",{class:"right"},h("button",{type:"button",class:"btn",onclick:()=>dlg.close()},"Cancelar"),opt.onSave?h("button",{type:"submit",class:"btn primary",text:opt.saveLabel||"Guardar"}):null)):null);
+  form.addEventListener("submit",async e=>{e.preventDefault(); if(!opt.onSave)return; const ok=await opt.onSave(); if(ok!==false)dlg.close();});
+  dlg.replaceChildren(form); dlg.onclose=()=>{ if(opt.onClose)opt.onClose(); };
+  if(!dlg.open)dlg.showModal(); hydrate(dlg);
+  const first=form.querySelector("input:not([type=hidden]),textarea,select"); if(first&&!opt.noFocus)first.focus();
+}
+function confirmBtn(label,ask,fn,cls){
+  let armed=false,t=0;const b=h("button",{class:cls||"btn danger ghost",type:"button",text:label});
+  b.addEventListener("click",()=>{ if(armed){clearTimeout(t);fn();return;} armed=true;b.textContent=ask+" Sí";t=setTimeout(()=>{armed=false;b.textContent=label;},4000); });
+  return b;
+}
+function field(label,el){return h("label",{class:"field"},h("span",{text:label}),el);}
+function searchBox(o){
+  const inp=h("input",{class:"input",type:"search",id:"geo-q",placeholder:o.placeholder||"Buscar",autocomplete:"off"});
+  const ul=h("ul",{class:"results"}),hint=h("p",{class:"hint",text:o.hint||"Escribí el nombre y tocá Buscar."});
+  const go=async()=>{const q=inp.value.trim(); if(q.length<2)return; hint.textContent="Buscando…";ul.replaceChildren();
+    try{const rs=await geocode(q,o.near);
+      hint.textContent=rs.length?"Elegí el resultado correcto.":"No encontré nada con ese nombre. Probá agregando la ciudad o el país.";
+      ul.replaceChildren(...rs.map(r=>h("li",null,h("button",{type:"button",onclick:()=>o.onPick(r)},h("b",{text:r.name}),h("small",{text:r.label})))));
+    }catch(e){hint.textContent="No se pudo buscar. Revisá la conexión e intentá de nuevo.";}};
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});
+  return h("div",{class:"field"},h("span",{text:o.label||"Buscar"}),h("div",{class:"srch"},inp,h("button",{type:"button",class:"btn",onclick:go},"Buscar")),ul,hint);
+}
+function photosField(arr,fresh){
+  const thumbs=h("div",{class:"thumbs"}),file=h("input",{type:"file",accept:"image/*",multiple:true,hidden:true,id:"ph-files"});
+  const btn=h("button",{type:"button",class:"btn small",style:"align-self:flex-start",onclick:()=>file.click()},"+ Subir fotos");
+  const draw=()=>{thumbs.replaceChildren(...arr.map((id,i)=>h("div",{class:"thumb"},pimg(id,"Foto "+(i+1)),h("button",{type:"button","aria-label":"Quitar foto",onclick:()=>{arr.splice(i,1);draw();}},"×"))));hydrate(thumbs);};
+  file.addEventListener("change",async()=>{const fs=[...file.files];file.value="";btn.disabled=true;let bad=0;
+    for(let i=0;i<fs.length;i++){btn.textContent=`Cargando ${i+1} de ${fs.length}…`;try{const id=await addPhoto(fs[i]);arr.push(id);fresh.push(id);draw();}catch(e){bad++;}}
+    btn.disabled=false;btn.textContent="+ Subir fotos"; if(bad)toast(bad===1?"Una foto no se pudo cargar.":`${bad} fotos no se pudieron cargar.`);});
+  draw();return h("div",{class:"field"},h("span",{text:"Fotos"}),thumbs,file,btn);
+}
+function photoGrid(ids,alt){ids=ids||[];return ids.length?h("div",{class:"photos n"+Math.min(ids.length,5)},ids.map(id=>h("button",{type:"button","aria-label":"Ampliar foto",onclick:async()=>{$("#lightbox-img").src=await photoURL(id);$("#lightbox").showModal();}},pimg(id,alt)))):null;}
+$("#lightbox-close").onclick=()=>$("#lightbox").close();
+$("#lightbox").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.close();});
+
+/* ---------- trip dialog ---------- */
+function tripDialog(t,defaults){
+  const d=t||Object.assign({kind:"done",scope:"int"},defaults);
+  const name=h("input",{class:"input",id:"tr-name",type:"text",required:true,maxlength:80,value:d.name||"",placeholder:"Ej.: California"});
+  const s=h("input",{class:"input",id:"tr-start",type:"date",value:d.start||""}),e=h("input",{class:"input",id:"tr-end",type:"date",value:d.end||""});
+  const scope=h("select",{class:"input",id:"tr-scope"},h("option",{value:"int",text:"Internacional"}),h("option",{value:"nac",text:"Nacional (Uruguay)"}));scope.value=d.scope||"int";
+  const note=h("textarea",{class:"input",id:"tr-note",maxlength:4000,style:"min-height:70px",placeholder:"Con quién fui, por qué, lo que quiera recordar…"});note.value=d.note||"";
+  openDialog(t?"Editar viaje":d.kind==="plan"?"Planificar viaje":"Nuevo viaje",[field("Nombre del viaje",name),h("div",{class:"row2"},field("Desde",s),field("Hasta",e)),field("Tipo",scope),field("Notas",note)],{
+    onSave:()=>{const n=name.value.trim(); if(!n){name.focus();return false;}
+      let a=s.value,b=e.value; if(a&&b&&b<a)[a,b]=[b,a];
+      if(t){Object.assign(t,{name:n,start:a,end:b,scope:scope.value,note:note.value.trim()});save();render();}
+      else{const nt={id:uid(),name:n,kind:d.kind,scope:scope.value,start:a,end:b,note:note.value.trim(),stops:[],createdAt:Date.now()};DB.trips.push(nt);save();location.hash="#/viaje/"+nt.id;}
+    },
+    onDelete:t?()=>{const back=t.kind==="plan"?"#/quiero":"#/viajes";deleteTrip(t);toast("Viaje eliminado");location.hash=back;}:null,deleteAsk:"¿Eliminar el viaje con sus puntos y entradas?"});
+}
+function stopDialog(t){
+  openDialog("Añadir ciudad o pueblo",[searchBox({label:"Ciudad o pueblo",placeholder:"Ej.: San Francisco, Carmel, Big Sur",onPick:r=>{
+    t.stops.push({id:uid(),name:r.name,cc:r.cc,country:r.country,lat:r.lat,lng:r.lng,days:1});save();dlg.close();UI.stop=t.stops[t.stops.length-1].id;UI.day=0;render();toast(r.name+" añadida al viaje");}})],{});
+}
+/* ---------- point dialog ---------- */
+function pointDialog(t,stop,p,preset){
+  const d=p?Object.assign({},p,{photos:(p.photos||[]).slice()}):Object.assign({name:"",cat:"otro",day:UI.day||1,note:"",photos:[],lat:null,lng:null},preset);
+  const fresh=[];let saved=false;
+  const where=h("div",{class:"where"});
+  const drawWhere=()=>where.replaceChildren(...[h("span",{class:"mono",text:d.lat!=null?`${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}`:"Sin ubicación todavía"}),d.lat!=null?h("a",{class:"btn small ghost",href:gmaps(d.lat,d.lng),target:"_blank",rel:"noopener"},"Ver en Google Maps"):null].filter(Boolean));
+  drawWhere();
+  const name=h("input",{class:"input",id:"pt-name",type:"text",required:true,maxlength:100,value:d.name,placeholder:"Ej.: Museo de Arte Moderno"});
+  const cat=h("select",{class:"input",id:"pt-cat"},CATS.map(c=>h("option",{value:c[0],text:`${c[2]} ${c[1]}`})));cat.value=d.cat;
+  const n=stopDays(t,stop),day=h("select",{class:"input",id:"pt-day"},Array.from({length:n},(_,i)=>h("option",{value:i+1,text:"Día "+(i+1)})));day.value=String(Math.min(d.day,n));
+  const note=h("textarea",{class:"input",id:"pt-note",maxlength:4000,style:"min-height:70px",placeholder:"Qué hice, qué pedí, si volvería…"});note.value=d.note||"";
+  const sb=searchBox({label:"Buscar el lugar por nombre",placeholder:"Ej.: Golden Gate Bridge",near:stop,hint:"Buscá por nombre o dirección. También podés marcarlo tocando el mapa.",onPick:r=>{d.lat=r.lat;d.lng=r.lng; if(!name.value.trim())name.value=r.name; drawWhere(); sb.querySelector(".results").replaceChildren(); sb.querySelector(".hint").textContent="Ubicación elegida: "+r.label;}});
+  openDialog(p?"Editar punto":"Nuevo punto en "+stop.name,[sb,where,field("Nombre",name),h("div",{class:"row2"},field("Categoría",cat),field("Día",day)),field("Nota",note),photosField(d.photos,fresh)],{noFocus:d.lat!=null,
+    onSave:()=>{const nm=name.value.trim(); if(!nm){name.focus();return false;} if(d.lat==null){toast("Falta la ubicación: buscá el lugar o marcalo en el mapa.");return false;}
+      const nd=+day.value;
+      if(p){ if(p.day!==nd)p.order=1+Math.max(0,...stopPoints(t.id,stop.id).filter(x=>x.day===nd).map(x=>x.order));
+        dropPhotos((p.photos||[]).filter(id=>!d.photos.includes(id)));
+        Object.assign(p,{name:nm,cat:cat.value,day:nd,note:note.value.trim(),lat:d.lat,lng:d.lng,photos:d.photos});}
+      else DB.points.push({id:uid(),tripId:t.id,stopId:stop.id,name:nm,cat:cat.value,day:nd,order:1+Math.max(0,...stopPoints(t.id,stop.id).filter(x=>x.day===nd).map(x=>x.order)),note:note.value.trim(),lat:d.lat,lng:d.lng,photos:d.photos});
+      saved=true;save();render();},
+    onDelete:p?()=>{dropPhotos(p.photos);DB.points=DB.points.filter(x=>x.id!==p.id);saved=true;save();render();}:null,deleteAsk:"¿Eliminar este punto?",
+    onClose:()=>{ if(!saved)dropPhotos(fresh); }});
+}
+/* ---------- entry dialog ---------- */
+function entryDialog(t,en){
+  const d=en?Object.assign({},en,{photos:(en.photos||[]).slice()}):{date:t.start||todayStr(),title:"",text:"",stopId:"",photos:[]};
+  const fresh=[];let saved=false;
+  const date=h("input",{class:"input",id:"en-date",type:"date",required:true,value:d.date||""});
+  const st=h("select",{class:"input",id:"en-stop"},h("option",{value:"",text:"Todo el viaje"}),t.stops.map(s=>h("option",{value:s.id,text:s.name})));st.value=d.stopId||"";
+  const title=h("input",{class:"input",id:"en-title",type:"text",required:true,maxlength:120,value:d.title,placeholder:"Ej.: Primer día en San Francisco"});
+  const text=h("textarea",{class:"input",id:"en-text",maxlength:30000,style:"min-height:150px",placeholder:"Contá el día…"});text.value=d.text||"";
+  openDialog(en?"Editar entrada":"Nueva entrada del blog",[h("div",{class:"row2"},field("Día",date),field("Ciudad o pueblo",st)),field("Título",title),field("Qué hice",text),photosField(d.photos,fresh)],{
+    onSave:()=>{const tt=title.value.trim(); if(!tt||!date.value){(tt?date:title).focus();return false;}
+      const data={date:date.value,title:tt,text:text.value.trim(),stopId:st.value,photos:d.photos};
+      if(en){dropPhotos((en.photos||[]).filter(id=>!d.photos.includes(id)));Object.assign(en,data);}else DB.entries.push(Object.assign({id:uid(),tripId:t.id,createdAt:Date.now()},data));
+      saved=true;save();render();},
+    onDelete:en?()=>{dropPhotos(en.photos);DB.entries=DB.entries.filter(x=>x.id!==en.id);saved=true;save();render();}:null,deleteAsk:"¿Eliminar la entrada y sus fotos?",
+    onClose:()=>{ if(!saved)dropPhotos(fresh); }});
+}
+/* ---------- wish dialog ---------- */
+function wishDialog(w){
+  const d=w?Object.assign({},w):{name:"",cat:"ciudad",note:"",link:"",lat:null,lng:null,cc:"",country:"",place:""};
+  const where=h("div",{class:"where"});
+  const drawWhere=()=>where.replaceChildren(...[h("span",{text:d.lat!=null?(d.place||`${d.lat.toFixed(3)}, ${d.lng.toFixed(3)}`):"Sin ubicación (queda solo como apunte)"}),d.lat!=null?h("button",{type:"button",class:"btn small ghost",onclick:()=>{d.lat=d.lng=null;d.cc=d.country=d.place="";drawWhere();}},"Quitar"):null].filter(Boolean));
+  drawWhere();
+  const name=h("input",{class:"input",id:"wi-name",type:"text",required:true,maxlength:100,value:d.name,placeholder:"Ej.: Comer en Trattoria da Enzo"});
+  const cat=h("select",{class:"input",id:"wi-cat"},WCATS.map(c=>h("option",{value:c[0],text:`${c[2]} ${c[1]}`})));cat.value=d.cat;
+  const link=h("input",{class:"input",id:"wi-link",type:"url",value:d.link||"",placeholder:"https://… (opcional)"});
+  const note=h("textarea",{class:"input",id:"wi-note",maxlength:4000,placeholder:"De dónde saqué la idea, qué quiero hacer ahí…"});note.value=d.note||"";
+  const sb=searchBox({label:"Ubicación (opcional)",placeholder:"Ciudad, restaurante, lugar…",hint:"Si le ponés ubicación, aparece en el mapa de «Quiero ir».",onPick:r=>{d.lat=r.lat;d.lng=r.lng;d.cc=r.cc;d.country=r.country;d.place=r.label.split(",").slice(0,3).join(",");if(!name.value.trim())name.value=r.name;drawWhere();sb.querySelector(".results").replaceChildren();}});
+  openDialog(w?"Editar apunte":"Nuevo apunte",[field("Qué es",name),field("Categoría",cat),sb,where,field("Enlace",link),field("Notas",note)],{
+    onSave:()=>{const nm=name.value.trim(); if(!nm){name.focus();return false;}
+      const data={name:nm,cat:cat.value,note:note.value.trim(),link:link.value.trim(),lat:d.lat,lng:d.lng,cc:d.cc,country:d.country,place:d.place};
+      if(w)Object.assign(w,data);else DB.wishes.push(Object.assign({id:uid(),done:false,createdAt:Date.now()},data));save();render();},
+    onDelete:w?()=>{DB.wishes=DB.wishes.filter(x=>x.id!==w.id);save();render();}:null,deleteAsk:"¿Eliminar este apunte?"});
+}
+
+/* ================= views ================= */
+const UI={mode:"been",scope:"int",qtab:"ideas",trip:null,stop:null,day:0,pick:false};
+const app=$("#app");
+function render(){
+  maps.splice(0).forEach(m=>{try{m.stop();m.remove();}catch(e){}}); after=[];
+  const parts=location.hash.replace(/^#\/?/,"").split("/"),v=parts[0]||"mapa";
+  document.querySelectorAll("[data-nav]").forEach(a=>{const t=tripById(parts[1]);const cur=a.dataset.nav===v||(v==="viaje"&&a.dataset.nav===(t&&t.kind==="plan"?"quiero":"viajes"));cur?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current");});
+  const sc=app.firstElementChild&&app.firstElementChild.classList.contains("page")&&UI.lastHash===location.hash?app.firstElementChild.scrollTop:0, wy=UI.lastHash===location.hash?window.scrollY:0;
+  let node; if(v==="viajes")node=viewTrips(); else if(v==="viaje")node=viewTrip(parts[1]); else if(v==="quiero")node=viewWish(); else node=viewMap();
+  app.replaceChildren(node); after.forEach(f=>f()); hydrate(app);
+  if(node.classList.contains("page"))node.scrollTop=sc; window.scrollTo(0,wy); UI.lastHash=location.hash;
+}
+addEventListener("hashchange",()=>{UI.pick=false;render();});
+
+/* ---------- world map ---------- */
+function mapItems(){
+  const out=new Map();
+  if(UI.mode==="been"){
+    DB.trips.filter(t=>t.kind!=="plan").forEach(t=>t.stops.forEach(s=>{const k=s.name+"|"+s.lat.toFixed(1)+"|"+s.lng.toFixed(1);if(!out.has(k))out.set(k,{name:s.name,cc:s.cc,country:s.country,lat:s.lat,lng:s.lng,trips:[],sub:""});out.get(k).trips.push(t);}));
+  }else{
+    DB.trips.filter(t=>t.kind==="plan").forEach(t=>t.stops.forEach(s=>{const k=s.name+"|"+s.lat.toFixed(1)+"|"+s.lng.toFixed(1);if(!out.has(k))out.set(k,{name:s.name,cc:s.cc,country:s.country,lat:s.lat,lng:s.lng,trips:[],sub:""});out.get(k).trips.push(t);}));
+    DB.wishes.filter(w=>w.lat!=null&&!w.done).forEach(w=>out.set("w"+w.id,{name:w.name,cc:w.cc,country:w.country,lat:w.lat,lng:w.lng,trips:[],sub:catOf(w.cat,WCATS)[1],wish:w}));
+  }
+  return [...out.values()];
+}
+function viewMap(){
+  const items=mapItems(),been=UI.mode==="been";
+  const done=DB.trips.filter(t=>t.kind!=="plan"),ccs=new Set(done.flatMap(t=>t.stops.map(s=>s.cc)).filter(Boolean));
+  const cities=new Set(done.flatMap(t=>t.stops.map(s=>s.name+"|"+s.cc)));
+  const pct=ccs.size/195*100;
+  const stats=[[ccs.size,ccs.size===1?"país":"países"],[cities.size,cities.size===1?"lugar":"lugares"],[done.length,done.length===1?"viaje":"viajes"],[(pct<10?pct.toFixed(1).replace(".",","):Math.round(pct))+" %","del mundo"]];
+  const groups=new Map();items.forEach(i=>{const k=i.cc||"";if(!groups.has(k))groups.set(k,[]);groups.get(k).push(i);});
+  const keys=[...groups.keys()].sort((a,b)=>countryName(a,groups.get(a)[0].country).localeCompare(countryName(b,groups.get(b)[0].country),"es"));
+  const mapEl=h("div",{class:"bigmap",id:"world-map"});let map=null;const markers=new Map();
+  after.push(()=>{
+    map=mkMap(mapEl,{minZoom:2}).setView([15,-20],2);
+    const col=getComputedStyle(document.documentElement).getPropertyValue(been?"--accent":"--wish").trim()||"#b92d57";
+    geoReady.then(ok=>{ if(!ok||!maps.includes(map))return; const set=new Set(items.map(i=>i.cc));
+      L.geoJSON(GEO,{interactive:false,style:f=>({stroke:false,fillColor:col,fillOpacity:set.has(numToCc[f.id])?0.28:0})}).addTo(map); });
+    items.forEach(i=>{const pop=h("div",{class:"pop"},h("b",{text:i.name}),h("span",{class:"hint",text:`${flag(i.cc)} ${countryName(i.cc,i.country)}${i.sub?" · "+i.sub:""}`}),
+        i.trips.map(t=>h("a",{href:"#/viaje/"+t.id,text:`${t.name}${tripYear(t)?" · "+tripYear(t):""}`})),i.wish?h("button",{type:"button",onclick:()=>wishDialog(i.wish)},"Ver apunte"):null);
+      markers.set(i,L.marker([i.lat,i.lng],{icon:numIcon(null,col,true),title:i.name}).bindPopup(pop).addTo(map));});
+    if(items.length)map.fitBounds(L.latLngBounds(items.map(i=>[i.lat,i.lng])).pad(0.3),{maxZoom:5,animate:false});
+  });
+  const seg=h("div",{class:"seg",role:"group","aria-label":"Qué mostrar"},
+    h("button",{type:"button","aria-pressed":String(been),onclick:()=>{UI.mode="been";render();}},"Estuve"),
+    h("button",{type:"button","aria-pressed":String(!been),onclick:()=>{UI.mode="wish";render();}},"Quiero ir"));
+  const list=items.length?keys.map(cc=>h("div",{class:"cgroup"},
+      h("div",{class:"chead"},h("span",{text:flag(cc)}),h("span",{class:"cname",text:countryName(cc,groups.get(cc)[0].country)}),h("span",{class:"mono muted",style:"font-size:12px",text:groups.get(cc).length})),
+      h("ul",null,groups.get(cc).sort((a,b)=>a.name.localeCompare(b.name,"es")).map(i=>h("li",null,h("button",{class:"pitem",type:"button",onclick:()=>{ if(!map)return; map.flyTo([i.lat,i.lng],Math.max(map.getZoom(),8),{duration:0.9});markers.get(i).openPopup(); if(innerWidth<=860)mapEl.scrollIntoView({behavior:"smooth"});}},
+        h("b",{text:i.name}),h("small",{class:"mono",text:i.trips.length?i.trips.map(tripYear).filter(Boolean).join(", "):i.sub})))))))
+    :h("p",{class:"empty",text:been?"Todavía no hay lugares. Creá tu primer viaje en «Viajes» y sus ciudades y pueblos van a aparecer acá y en el mapa.":"Todavía no hay nada en la lista. En «Quiero ir» podés anotar lugares con ubicación o planificar un viaje, y aparecen acá."});
+  return h("div",{class:"mapview"},
+    h("aside",{class:"side","aria-label":"Lugares"},
+      h("div",{class:"side-head"},h("div",{class:"stats"},stats.map(([n,l])=>h("div",{class:"stat"},h("b",{text:n}),h("span",{text:l})))),seg),
+      h("div",{class:"side-body"},list)),
+    mapEl);
+}
+
+/* ---------- trips list ---------- */
+function tripCard(t){
+  const pts=DB.points.filter(p=>p.tripId===t.id).length,ens=DB.entries.filter(e=>e.tripId===t.id),cover=ens.flatMap(e=>e.photos||[])[0]||DB.points.filter(p=>p.tripId===t.id).flatMap(p=>p.photos||[])[0];
+  return h("a",{class:"trip",href:"#/viaje/"+t.id},
+    cover?h("div",{class:"cover"},pimg(cover,"Foto de "+t.name)):null,
+    h("div",{class:"thead"},h("h3",{text:t.name}),h("span",{class:"yr mono",text:tripYear(t)||""})),
+    h("p",{class:"cities",text:t.stops.length?t.stops.map(s=>s.name).join(" · "):"Sin ciudades todavía"}),
+    h("p",{class:"meta mono",text:[fmtRange(t.start,t.end),plural(pts,"punto","puntos"),plural(ens.length,"entrada","entradas")].filter(Boolean).join("  ·  ")}));
+}
+const sortTrips=a=>a.slice().sort((x,y)=>(y.start||"").localeCompare(x.start||"")||(y.createdAt||0)-(x.createdAt||0));
+function viewTrips(){
+  const all=DB.trips.filter(t=>t.kind!=="plan"),list=sortTrips(all.filter(t=>(t.scope||"int")===UI.scope));
+  const n=s=>all.filter(t=>(t.scope||"int")===s).length;
+  return h("div",{class:"page"},h("div",{class:"page-in"},
+    h("div",{class:"page-head"},h("h1",{text:"Viajes"}),h("button",{class:"btn primary",type:"button",onclick:()=>tripDialog(null,{kind:"done",scope:UI.scope})},"+ Nuevo viaje")),
+    h("div",{class:"seg",style:"align-self:flex-start",role:"group","aria-label":"Tipo de viaje"},
+      h("button",{type:"button","aria-pressed":String(UI.scope==="int"),onclick:()=>{UI.scope="int";render();}},`Internacionales · ${n("int")}`),
+      h("button",{type:"button","aria-pressed":String(UI.scope==="nac"),onclick:()=>{UI.scope="nac";render();}},`Nacionales · ${n("nac")}`)),
+    list.length?h("div",{class:"trips"},list.map(tripCard)):h("p",{class:"empty",text:UI.scope==="int"?"Todavía no cargaste viajes internacionales. Con «Nuevo viaje» le ponés nombre y fechas, y después le sumás ciudades, recorridos por día y entradas del blog.":"Todavía no cargaste viajes por Uruguay. Con «Nuevo viaje» creás el primero."})));
+}
+
+/* ---------- one trip ---------- */
+function viewTrip(id){
+  const t=tripById(id);
+  if(!t)return h("div",{class:"page"},h("div",{class:"page-in"},h("p",{class:"empty",text:"Ese viaje ya no existe."}),h("a",{class:"btn",href:"#/viajes",style:"align-self:flex-start"},"← Viajes")));
+  if(UI.trip!==t.id){UI.trip=t.id;UI.stop=null;UI.day=0;UI.pick=false;}
+  const plan=t.kind==="plan"; let stop=t.stops.find(s=>s.id===UI.stop)||t.stops[0]||null; UI.stop=stop?stop.id:null;
+  const kids=[];
+  kids.push(h("a",{class:"btn small ghost",href:plan?"#/quiero":"#/viajes",style:"align-self:flex-start"},plan?"← Quiero ir":"← Viajes"));
+  kids.push(h("div",{class:"page-head"},
+    h("div",null,h("span",{class:"label",text:(plan?"Viaje futuro · ":"")+((t.scope||"int")==="nac"?"Nacional":"Internacional")}),h("h1",{text:t.name}),
+      h("p",{class:"mono muted",text:fmtRange(t.start,t.end)||"Sin fechas"})),
+    h("div",{class:"chips"},plan?h("button",{class:"btn",type:"button",onclick:()=>{t.kind="done";save();toast("Pasó a tus viajes hechos");location.hash="#/viaje/"+t.id;render();}},"Ya lo hice"):null,
+      h("button",{class:"btn",type:"button",onclick:()=>tripDialog(t)},"Editar viaje"))));
+  if(t.note)kids.push(h("p",{style:"white-space:pre-wrap;max-width:65ch",text:t.note}));
+  kids.push(h("div",{class:"stops"},t.stops.map((s,i)=>h("span",{class:"stopchip"},`${i+1}. ${s.name}`,
+      confirmBtn("×","¿Quitar?",()=>{dropPhotos(DB.points.filter(p=>p.stopId===s.id).flatMap(p=>p.photos||[]));DB.points=DB.points.filter(p=>p.stopId!==s.id);t.stops=t.stops.filter(x=>x.id!==s.id);save();render();},"x"))),
+    h("button",{class:"btn small primary",type:"button",onclick:()=>stopDialog(t)},"+ Ciudad o pueblo")));
+
+  /* map of the trip */
+  const tm=h("div",{class:"map",id:"trip-map"});
+  kids.push(h("section",{class:"sec"},h("div",{class:"sec-head"},h("h2",{text:"Mapa del viaje"})),
+    t.stops.length?tm:h("p",{class:"empty",text:"Sumá las ciudades y pueblos del viaje con «+ Ciudad o pueblo» y van a aparecer en este mapa, en orden."})));
+  if(t.stops.length)after.push(()=>{const m=mkMap(tm,{scrollWheelZoom:false});const ll=t.stops.map(s=>[s.lat,s.lng]);
+    if(ll.length>1)L.polyline(ll,{color:"#b92d57",weight:2.5,dashArray:"2 8",opacity:.9}).addTo(m);
+    t.stops.forEach((s,i)=>L.marker([s.lat,s.lng],{icon:numIcon(i+1,"#b92d57"),title:s.name}).bindPopup(h("div",{class:"pop"},h("b",{text:s.name}),h("span",{class:"hint",text:`${flag(s.cc)} ${countryName(s.cc,s.country)}`}),h("button",{type:"button",onclick:()=>{UI.stop=s.id;UI.day=0;render();document.getElementById("sec-dias").scrollIntoView({behavior:"smooth"});}},"Ver mapa por día"))).addTo(m));
+    ll.length>1?m.fitBounds(L.latLngBounds(ll).pad(0.25),{animate:false}):m.setView(ll[0],9,{animate:false});});
+
+  /* map by day */
+  const sec=h("section",{class:"sec"+(UI.pick?" picking":""),id:"sec-dias"},h("div",{class:"sec-head"},h("h2",{text:"Mapa por día"})));
+  if(!stop)sec.append(h("p",{class:"empty",text:"Cuando el viaje tenga ciudades, acá marcás el recorrido de cada día: hotel, comidas, museos, compras y todo lo que hayas visitado, en orden y unido por líneas."}));
+  else{
+    const n=stopDays(t,stop),pts=stopPoints(t.id,stop.id); if(UI.day>n)UI.day=0;
+    sec.append(h("div",{class:"chips"},t.stops.map(s=>h("button",{class:"chip",type:"button","aria-pressed":String(s.id===stop.id),onclick:()=>{UI.stop=s.id;UI.day=0;UI.pick=false;render();}},s.name))));
+    sec.append(h("div",{class:"chips"},
+      h("button",{class:"chip",type:"button","aria-pressed":String(UI.day===0),onclick:()=>{UI.day=0;render();}},"Todos los días"),
+      Array.from({length:n},(_,i)=>h("button",{class:"chip",type:"button",style:`--c:${dayColor(i+1)}`,"aria-pressed":String(UI.day===i+1),onclick:()=>{UI.day=i+1;render();}},h("i",{class:"sw"}),"Día "+(i+1))),
+      h("button",{class:"btn small ghost",type:"button",onclick:()=>{stop.days=n+1;UI.day=n+1;save();render();}},"+ Día"),
+      n>1&&!pts.some(p=>p.day===n)?h("button",{class:"btn small ghost",type:"button",onclick:()=>{stop.days=n-1;UI.day=0;save();render();}},`Quitar día ${n}`):null));
+    const dm=h("div",{class:"map tall",id:"day-map"});
+    const shown=pts.filter(p=>!UI.day||p.day===UI.day);
+    after.push(()=>{const m=mkMap(dm,{scrollWheelZoom:false});const all=[];
+      for(let d=1;d<=n;d++){ if(UI.day&&UI.day!==d)continue; const dp=pts.filter(p=>p.day===d),ll=dp.map(p=>[p.lat,p.lng]);all.push(...ll);
+        if(ll.length>1)L.polyline(ll,{color:dayColor(d),weight:3.5,dashArray:"3 9",lineCap:"round",opacity:.95}).addTo(m);
+        dp.forEach((p,i)=>L.marker([p.lat,p.lng],{icon:numIcon(i+1,dayColor(d)),title:p.name}).bindPopup(h("div",{class:"pop"},h("b",{text:p.name}),h("span",{class:"hint",text:`Día ${d} · ${catOf(p.cat)[2]} ${catOf(p.cat)[1]}`}),p.note?h("span",{class:"hint",style:"white-space:pre-wrap",text:p.note}):null,h("a",{href:gmaps(p.lat,p.lng),target:"_blank",rel:"noopener",text:"Abrir en Google Maps"}),h("button",{type:"button",onclick:()=>pointDialog(t,stop,p)},"Editar"))).addTo(m));}
+      all.length>1?m.fitBounds(L.latLngBounds(all).pad(0.2),{maxZoom:16,animate:false}):m.setView(all[0]||[stop.lat,stop.lng],all.length?15:13,{animate:false});
+      m.on("click",e=>{ if(!UI.pick)return; UI.pick=false; const preset={lat:+e.latlng.lat.toFixed(5),lng:+e.latlng.lng.toFixed(5)}; render(); pointDialog(t,stop,null,preset); });});
+    const move=(p,dir)=>{const same=pts.filter(x=>x.day===p.day),i=same.indexOf(p),j=i+dir; if(j<0||j>=same.length)return; const o=p.order;p.order=same[j].order;same[j].order=o; if(p.order===same[j].order)p.order+=dir; save();render();};
+    const blocks=[];
+    for(let d=1;d<=n;d++){ if(UI.day&&UI.day!==d)continue; const dp=pts.filter(p=>p.day===d);
+      blocks.push(h("div",{class:"dayblock",style:`--c:${dayColor(d)}`},h("div",{class:"dayhead"},h("i"),"Día "+d,h("span",{class:"mono muted",style:"font-weight:400;letter-spacing:0;text-transform:none",text:plural(dp.length,"punto","puntos")})),
+        dp.length?dp.map((p,i)=>h("div",{class:"pt"},h("span",{class:"num",text:i+1}),
+          h("div",null,h("b",{text:p.name}),h("div",{class:"cat",text:`${catOf(p.cat)[2]} ${catOf(p.cat)[1]}`}),p.note?h("div",{class:"note",text:p.note}):null,photoGrid(p.photos,"Foto de "+p.name)),
+          h("div",{class:"tools"},h("button",{type:"button","aria-label":"Subir en el orden",disabled:i===0,onclick:()=>move(p,-1)},"↑"),h("button",{type:"button","aria-label":"Bajar en el orden",disabled:i===dp.length-1,onclick:()=>move(p,1)},"↓"),h("button",{type:"button","aria-label":"Editar punto",onclick:()=>pointDialog(t,stop,p)},"✎"))))
+        :h("p",{class:"hint",text:"Sin puntos este día."})));}
+    if(UI.pick)sec.append(h("div",{class:"pickbar"},h("span",{text:"Tocá el mapa donde queda el lugar"}),h("button",{class:"btn small",type:"button",onclick:()=>{UI.pick=false;render();}},"Cancelar")));
+    sec.append(h("div",{class:"daygrid"},dm,h("div",{class:"daylist"},
+      h("div",{class:"chips"},h("button",{class:"btn primary small",type:"button",onclick:()=>pointDialog(t,stop,null)},"+ Punto"),h("button",{class:"btn small",type:"button",onclick:()=>{UI.pick=true;render();dm.scrollIntoView({behavior:"smooth",block:"center"});}},"Marcar tocando el mapa")),
+      blocks, shown.length?null:h("p",{class:"hint",text:"Agregá el primer punto buscándolo por nombre o tocando el mapa. El orden de la lista es el orden del recorrido."}))));
+  }
+  kids.push(sec);
+
+  /* blog */
+  const ens=DB.entries.filter(e=>e.tripId===t.id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.createdAt||0)-(b.createdAt||0));
+  kids.push(h("section",{class:"sec"},h("div",{class:"sec-head"},h("h2",{text:"Blog del viaje"}),h("button",{class:"btn primary small",type:"button",onclick:()=>entryDialog(t,null)},"+ Nueva entrada")),
+    ens.length?h("div",{style:"display:flex;flex-direction:column;gap:24px;padding-top:8px"},ens.map(e=>{const p=pd(e.date),s=t.stops.find(x=>x.id===e.stopId);
+      return h("article",{class:"entry"},h("div",{class:"stamp","aria-hidden":"true"},h("b",{text:p?p.d:"·"}),h("span",{text:p?MES[p.m-1]:""}),h("span",{text:p?p.y:""})),
+        h("div",{class:"entry-body"},h("h3",{text:e.title}),h("div",{class:"entry-meta"},h("span",{class:"mono",text:fmtDate(e.date)}),s?h("span",{text:"· "+s.name}):null,h("button",{class:"btn small ghost",type:"button",style:"margin-left:auto",onclick:()=>entryDialog(t,e)},"Editar")),
+          e.text?h("p",{class:"entry-text",text:e.text}):null,photoGrid(e.photos,"Foto de "+e.title)));}))
+    :h("p",{class:"empty",text:"Todavía no escribiste sobre este viaje. Cada entrada lleva día, título, texto y fotos."})));
+  return h("div",{class:"page"},h("div",{class:"page-in"},kids));
+}
+
+/* ---------- wish list ---------- */
+function viewWish(){
+  const ideas=UI.qtab==="ideas",plans=sortTrips(DB.trips.filter(t=>t.kind==="plan"));
+  const ws=DB.wishes.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0)||(b.createdAt||0)-(a.createdAt||0));
+  return h("div",{class:"page"},h("div",{class:"page-in"},
+    h("div",{class:"page-head"},h("h1",{text:"Quiero ir"}),
+      ideas?h("button",{class:"btn primary",type:"button",onclick:()=>wishDialog(null)},"+ Nuevo apunte"):h("button",{class:"btn primary",type:"button",onclick:()=>tripDialog(null,{kind:"plan",scope:"int"})},"+ Planificar viaje")),
+    h("div",{class:"seg",style:"align-self:flex-start",role:"group","aria-label":"Sección"},
+      h("button",{type:"button","aria-pressed":String(ideas),onclick:()=>{UI.qtab="ideas";render();}},`Lugares e ideas · ${DB.wishes.length}`),
+      h("button",{type:"button","aria-pressed":String(!ideas),onclick:()=>{UI.qtab="planes";render();}},`Viajes futuros · ${plans.length}`)),
+    ideas?(ws.length?h("div",{class:"wishes"},ws.map(w=>{const c=catOf(w.cat,WCATS);
+        return h("div",{class:"wish"+(w.done?" done":"")},h("div",{class:"whead"},h("span",{class:"label",text:`${c[2]} ${c[1]}`}),h("button",{class:"btn small ghost",type:"button",onclick:()=>wishDialog(w)},"Editar")),
+          h("b",{text:w.name}),w.place?h("span",{class:"hint",text:`${flag(w.cc)} ${w.place}`}):null,w.note?h("p",{class:"note",text:w.note}):null,
+          h("div",{class:"chips",style:"margin-top:auto;padding-top:6px"},/^https?:\/\//.test(w.link||"")?h("a",{class:"btn small ghost",href:w.link,target:"_blank",rel:"noopener"},"Abrir enlace"):null,
+            h("button",{class:"btn small ghost",type:"button",onclick:()=>{w.done=!w.done;save();render();}},w.done?"Volver a pendiente":"Ya fui")));}))
+      :h("p",{class:"empty",text:"Acá van los apuntes sueltos: un restaurante que te recomendaron, una ciudad, un museo, una idea. Si les ponés ubicación, aparecen en el mapa de «Quiero ir»."}))
+    :(plans.length?h("div",{class:"trips"},plans.map(tripCard)):h("p",{class:"empty",text:"Planificá un viaje futuro igual que uno hecho: ciudades, días y puntos. Cuando lo hagas, con «Ya lo hice» pasa a Viajes sin volver a cargarlo."}))));
+}
+
+/* ================= backup ================= */
+const blobToData=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b);});
+async function exportAll(){
+  const photos={};for(const k of await idb.keys("photos")){const b=await idb.get("photos",k);if(b)photos[k]=await blobToData(b);}
+  const blob=new Blob([JSON.stringify({app:"atlas-juli",v:1,saved:new Date().toISOString(),db:DB,photos})],{type:"application/json"});
+  const a=h("a",{href:URL.createObjectURL(blob),download:`atlas-de-juli-${todayStr()}.json`});document.body.append(a);a.click();a.remove();toast("Copia descargada");
+}
+async function importAll(file){
+  try{const j=JSON.parse(await file.text()); if(j.app!=="atlas-juli"||!j.db)throw 0;
+    DB=Object.assign({trips:[],points:[],entries:[],wishes:[]},j.db);await idb.put("kv","state",DB);
+    for(const k in (j.photos||{})){const b=await (await fetch(j.photos[k])).blob();await idb.put("photos",k,b);}
+    photoURLs.clear();location.hash="#/viajes";render();toast("Copia restaurada");
+  }catch(e){toast("Ese archivo no es una copia del atlas.");}
+}
+$("#btn-backup").onclick=()=>openDialog("Copia de seguridad",[
+  h("p",{text:"Tus viajes y fotos se guardan en este navegador. Descargá una copia cada tanto: sirve para no perder nada y para pasar todo a otro dispositivo."}),
+  h("button",{class:"btn primary",type:"button",style:"align-self:flex-start",onclick:()=>{dlg.close();exportAll();}},"Descargar copia"),
+  h("p",{class:"hint",text:"Restaurar reemplaza todo lo que hay en este navegador por el contenido del archivo."}),
+  confirmBtn("Restaurar desde un archivo","¿Reemplazar todo?",()=>{dlg.close();$("#import-file").click();},"btn")],{});
+$("#import-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)importAll(f);});
+
+loadDB().then(()=>{ if(!location.hash)location.replace("#/mapa"); render(); });
+})();
+</script>
+</body>
+</html>
